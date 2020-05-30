@@ -12,8 +12,8 @@ def VerticalBlur(arr):
     new_arr = np.maximum(new_arr, np.roll(arr, shift, axis=0))
   return new_arr
 
-# arr: greyscale 2d np arrays from Image.convert("L"), blurred
-# returns: consecutive array of ints (width in total), indicating column numbers of the found vert line
+# arr: greyscale 2d np arrays from Image.convert("L"), blurred or not
+# returns: consecutive range of ints (width in total), indicating column numbers of the found vert line
 def FindVertLine(arr, width):
   _, ncols = arr.shape
   min_start = -1
