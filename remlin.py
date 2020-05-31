@@ -37,18 +37,26 @@ def TagRect(arr, top, bottom, left, right, rgb):
   arr[top : bottom, right-3:right] = rgb
 
 def Pad(arr, row_pad, col_pad):
-  avg = np.mean(arr, axis=(0,1)).astype(int)
+  top_avg = np.mean(arr[:50,:], axis=(0,1)).astype(int)
+  bottom_avg = np.mean(arr[-50:,:], axis=(0,1)).astype(int)
+  left_avg = np.mean(arr[:,:50], axis=(0,1)).astype(int)
+  right_avg = np.mean(arr[:,-50:], axis=(0,1)).astype(int)
+
   vert_shape = list(arr.shape)
   vert_shape[0] = row_pad
-  vert_pad = np.empty_like(arr, shape=vert_shape)
-  vert_pad[:,:] = avg
-  arr = np.concatenate((vert_pad, arr, vert_pad), axis=0)
+  top_pad = np.empty_like(arr, shape=vert_shape)
+  top_pad[:,:] = top_avg
+  bottom_pad = np.empty_like(arr, shape=vert_shape)
+  bottom_pad[:,:] = bottom_avg
+  arr = np.concatenate((top_pad, arr, bottom_pad), axis=0)
 
   hor_shape = list(arr.shape)
   hor_shape[1] = col_pad
-  hor_pad = np.empty_like(arr, shape=hor_shape)
-  hor_pad[:,:] = avg
-  return np.concatenate((hor_pad, arr, hor_pad), axis=1)
+  left_pad = np.empty_like(arr, shape=hor_shape)
+  left_pad[:,:] = left_avg
+  right_pad = np.empty_like(arr, shape=hor_shape)
+  right_pad[:,:] = right_avg
+  return np.concatenate((left_pad, arr, right_pad), axis=1)
 
 def PatchDist(a, b, masked_cols = None):
   diff = a-b
@@ -132,10 +140,8 @@ def RemoveVertLine(arr, recover_src_arr, line_width, step, patch_extend, row_ran
   result = MatchStripe(arr, patch_cols, step, padded_src, row0, col0, row_range, col_range, masked_cols = np.array(range(patch_extend, patch_extend+line_width)), recover=True)
   return (result[1], result[2])
 
-def RemLin(img, recover_src_img, step, patch_extend):
+def RemLin(img, recover_src_img, step, patch_extend, row_range, col_range):
   line_width = 4
-  row_range = range(-50, 50)
-  col_range = range(-50, 50)
 
   arr = np.array(img)
   recover_src_arr = np.array(recover_src_img)
@@ -147,10 +153,15 @@ def WriteImg(img, path):
     img.save(f)
 
 def MainProcess(path_img, path_recover_src):
+  step = 220
+  patch_extend = 150
+  row_range = range(-30, 30)
+  col_range = range(-20, 20)
+
   out_path, _ = os.path.splitext(path_img)
   img = Image.open(path_img)
   recover_src_img = Image.open(path_recover_src)
-  recovered_img, tagged_img, tagged_recover_src = RemLin(img, recover_src_img, 220, 150)
+  recovered_img, tagged_img, tagged_recover_src = RemLin(img, recover_src_img, step, patch_extend, row_range, col_range)
   WriteImg(recovered_img, out_path + "_recovered_img_.png")
   WriteImg(tagged_img, out_path + "_tagged_original_img_.png")
   WriteImg(tagged_recover_src, out_path + "_tagged_recover_src_img_.png")
