@@ -4,6 +4,17 @@ import sys
 import numpy as np
 from PIL import Image
 
+def HorBlur(arr):
+  new_arr = np.full_like(arr, 9999999, dtype="int64")
+  hor_shifts = [-8, -9, -10, 8, 9, 10, 135, 187, 243, -111, -132, -451]
+  for shift in hor_shifts:
+    new_arr = np.minimum(new_arr, np.square(arr-np.roll(arr, shift, axis=1)))
+
+  vert_shifts = [-8, -9, -10, 8, 9, 10, 135, 187, 243, -111, -132, -451, 1071, 2847, 3251, 4933]
+  for shift in hor_shifts:
+    new_arr = np.minimum(new_arr, np.roll(arr, shift, axis=0))
+  return new_arr
+
 # arr: greyscale 2d np arrays from Image.convert("L")
 # returns: arr but blurred. Each pixel is taken max brightness with 4 random pixels on same column.
 def VerticalBlur(arr):
@@ -37,10 +48,10 @@ def TagRect(arr, top, bottom, left, right, rgb):
   arr[top : bottom, right-3:right] = rgb
 
 def Pad(arr, row_pad, col_pad):
-  top_avg = np.mean(arr[:50,:], axis=(0,1)).astype(int)
-  bottom_avg = np.mean(arr[-50:,:], axis=(0,1)).astype(int)
-  left_avg = np.mean(arr[:,:50], axis=(0,1)).astype(int)
-  right_avg = np.mean(arr[:,-50:], axis=(0,1)).astype(int)
+  top_avg = np.mean(arr[:10,:], axis=(0,1)).astype(int)
+  bottom_avg = np.mean(arr[-10:,:], axis=(0,1)).astype(int)
+  left_avg = np.mean(arr[:,:10], axis=(0,1)).astype(int)
+  right_avg = np.mean(arr[:,-10:], axis=(0,1)).astype(int)
 
   vert_shape = list(arr.shape)
   vert_shape[0] = row_pad
@@ -137,12 +148,10 @@ def RemoveVertLine(arr, recover_src_arr, line_width, step, patch_extend, row_ran
   patch_cols = range(min(masked_cols)-patch_extend, max(masked_cols)+patch_extend)
   row0 = row_pad
   col0 = col_pad + min(patch_cols)
-  result = MatchStripe(arr, patch_cols, step, padded_src, row0, col0, row_range, col_range, masked_cols = np.array(range(patch_extend, patch_extend+line_width)), recover=True)
+  result = MatchStripe(arr, patch_cols, step, padded_src, row0, col0, row_range, col_range, masked_cols = np.array(masked_cols)-min(patch_cols), recover=True)
   return (result[1], result[2])
 
-def RemLin(img, recover_src_img, step, patch_extend, row_range, col_range):
-  line_width = 4
-
+def RemLin(img, recover_src_img, line_width, step, patch_extend, row_range, col_range):
   arr = np.array(img)
   recover_src_arr = np.array(recover_src_img)
   tagged_arr, tagged_recover_src = RemoveVertLine(arr, recover_src_arr, line_width, step, patch_extend, row_range, col_range)
@@ -153,6 +162,7 @@ def WriteImg(img, path):
     img.save(f)
 
 def MainProcess(path_img, path_recover_src):
+  line_width = 1
   step = 220
   patch_extend = 150
   row_range = range(-30, 30)
@@ -161,7 +171,7 @@ def MainProcess(path_img, path_recover_src):
   out_path, _ = os.path.splitext(path_img)
   img = Image.open(path_img)
   recover_src_img = Image.open(path_recover_src)
-  recovered_img, tagged_img, tagged_recover_src = RemLin(img, recover_src_img, step, patch_extend, row_range, col_range)
+  recovered_img, tagged_img, tagged_recover_src = RemLin(img, recover_src_img, line_width, step, patch_extend, row_range, col_range)
   WriteImg(recovered_img, out_path + "_recovered_img_.png")
   WriteImg(tagged_img, out_path + "_tagged_original_img_.png")
   WriteImg(tagged_recover_src, out_path + "_tagged_recover_src_img_.png")
